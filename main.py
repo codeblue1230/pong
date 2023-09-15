@@ -24,6 +24,7 @@ class Player: # Create player class
         self.height = height
         self.color = color
         self.move = 5
+        self.rect = (self.x, self.y, self.width, self.height)
 
     def draw_player(self): # method to draw each player on the screen
         pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
@@ -31,13 +32,20 @@ class Player: # Create player class
     def move_player(self): # method to move each player
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w] and self.x == 20: # Move player 1 Up
-            self.y -= self.move
+            if self.y > 0: # Check to make sure player stays on screen 
+                self.y -= self.move
         if keys[pygame.K_s] and self.x == 20: # Move player 1 Down
-            self.y += self.move
+            if self.y < (screen_height - self.height): # Check to make sure player stays on screen
+                self.y += self.move
         if keys[pygame.K_UP] and self.x != 20: # Move player 2 Up
-            self.y -= self.move
+            if self.y > 0: # Check to make sure player stays on screen
+                self.y -= self.move
         if keys[pygame.K_DOWN] and self.x != 20: # Move player 2 Down
-            self.y += self.move
+            if self.y < (screen_height - self.height): # Check to make sure player stays on screen    
+                self.y += self.move
+
+    def get_rect(self): # method to define outer bounds of each player for collision purposes
+        return pygame.Rect(self.x, self.y, self.width, self.height)
 
 
 class Ball: # Create Ball class
@@ -48,6 +56,7 @@ class Ball: # Create Ball class
         self.color = color
         self.y_move = random.choice([-1, 1]) * 3
         self.x_move = random.choice([-1, 1]) * 3
+        self.ball = pygame.draw.circle(screen, self.color, (self.x, self.y), self.radius)
     
     def draw_ball(self): # method to draw the ball on the screen
         pygame.draw.circle(screen, self.color, (self.x, self.y), self.radius)
@@ -57,6 +66,12 @@ class Ball: # Create Ball class
         self.y += self.y_move
         if self.y - self.radius <= 0 or self.y + self.radius >= screen_height:
             self.y_move *= -1
+
+    def hit_ball(self): # method to bounce ball off player in the other direction
+        self.x_move *= -1
+
+    def get_rect(self): # method to define outer box of ball as rectangle for collision purposes
+        return pygame.Rect(self.x - self.radius, self.y - self.radius, self.radius * 2, self.radius * 2)
 
 
 # Main game loop
@@ -69,6 +84,9 @@ def play():
     # Instantiate Ball Object
     ball = Ball(center_ball_X, center_ball_Y, ball_radius, ball_color)
 
+    # Create player list to loop through later
+    player_list = [player1, player2]
+
     running = True
     while running:
         for event in pygame.event.get(): # Loop through all events
@@ -76,6 +94,10 @@ def play():
                 running = False # Break the loop if program gets closed
 
         screen.fill((0, 0, 0)) # Fill the screen with background color of black
+
+        for player in player_list: # Loop through player list
+            if ball.get_rect().colliderect(player.get_rect()):  # Check for collisions between the players and the ball
+                ball.hit_ball() # If collision is detected make the ball go the opposite direction
 
         player1.draw_player() # Draw player 1 on screen
         player2.draw_player() # Draw player 2 on screen
