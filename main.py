@@ -46,6 +46,13 @@ class Player: # Create player class
 
     def get_rect(self): # method to define outer bounds of each player for collision purposes
         return pygame.Rect(self.x, self.y, self.width, self.height)
+    
+    def score(self, player_text, score, color, x, y): # method displaying each player's score
+        font = pygame.font.SysFont("Times New Roman", 25)
+        text = font.render(f"{player_text} {score}", True, color)
+        text_rect = self.get_rect()
+        text_rect.center = (x, y)
+        screen.blit(text, text_rect)
 
 
 class Ball: # Create Ball class
@@ -54,27 +61,50 @@ class Ball: # Create Ball class
         self.y = y
         self.radius = radius
         self.color = color
-        self.y_move = random.choice([-1, 1]) * 3
-        self.x_move = random.choice([-1, 1]) * 3
+        self.y_move = random.choice([-1, 1]) * 4
+        self.x_move = random.choice([-1, 1]) * 4
         self.ball = pygame.draw.circle(screen, self.color, (self.x, self.y), self.radius)
+        self.ball_moved = False
     
     def draw_ball(self): # method to draw the ball on the screen
         pygame.draw.circle(screen, self.color, (self.x, self.y), self.radius)
 
     def move_ball(self): # method to move the ball
-        self.x += self.x_move
-        self.y += self.y_move
+        keys = pygame.key.get_pressed()
+        if self.ball_moved == False and keys[pygame.K_RETURN]:
+            self.x += self.x_move
+            self.y += self.y_move
+            self.ball_moved = True
         if self.y - self.radius <= 0 or self.y + self.radius >= screen_height:
             self.y_move *= -1
+        if self.ball_moved == True:
+            self.x += self.x_move
+            self.y += self.y_move
+
+    def reset(self, x, y): # method to start ball in center once a player scores
+        self.x = x
+        self.y = y
+        self.ball_moved = False
 
     def hit_ball(self): # method to bounce ball off player in the other direction
         self.x_move *= -1
 
-    def get_rect(self): # method to define outer box of ball as rectangle for collision purposes
+    def get_rect(self): # method to define outer box of the ball as a rectangle for collision purposes
         return pygame.Rect(self.x - self.radius, self.y - self.radius, self.radius * 2, self.radius * 2)
+    
+    def score(self): # method to get the x value of ball to be used in main game loop
+        return self.x
+
+# Function used to instruct user how to start the game
+def display_text(text):
+    font = pygame.font.SysFont("Times New Roman", 25)
+    text_surface = font.render(text, True, (255, 255, 255))
+    text_rect = text_surface.get_rect()
+    text_rect.center = (screen_width / 2, 75)
+    screen.blit(text_surface, text_rect)
 
 
-# Main game loop
+# Main game Function holding the main game loop
 def play():
 
     # Instantiate Player Objects
@@ -87,17 +117,33 @@ def play():
     # Create player list to loop through later
     player_list = [player1, player2]
 
+    # Variables used to track each player's score
+    p1_score, p2_score = 0, 0 
+
+    # Flag used to display/hide text
+    show_text = True
+
+    # Main Game loop and variable
     running = True
     while running:
         for event in pygame.event.get(): # Loop through all events
             if event.type == pygame.QUIT: # If conditional to check if user closes program
                 running = False # Break the loop if program gets closed
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN: 
+                    show_text = False
 
         screen.fill((0, 0, 0)) # Fill the screen with background color of black
+
+        if show_text == True and p1_score != 5 and p2_score != 5: # Gives user the chance to press Enter
+            display_text("Press Enter When Ready") # Display Text
 
         for player in player_list: # Loop through player list
             if ball.get_rect().colliderect(player.get_rect()):  # Check for collisions between the players and the ball
                 ball.hit_ball() # If collision is detected make the ball go the opposite direction
+
+        player1.score("Player 1:", p1_score, (255, 255, 255), 100, 75) # Display player 1's score
+        player2.score("Player 2:", p2_score, (255, 255, 255),  screen_width - 200, 75) # Display player 2's score
 
         player1.draw_player() # Draw player 1 on screen
         player2.draw_player() # Draw player 2 on screen
@@ -105,7 +151,29 @@ def play():
 
         player1.move_player() # Move player 1 
         player2.move_player() # Move player 2
-        ball.move_ball() # Move the ball in a random direction off the starts
+        ball.move_ball() # Move the ball after enter is hit and keep it moving
+
+        if ball.score() <= 0: # If ball gets past player 1
+            p2_score += 1 # Add point to player 2 score
+            ball.reset(center_ball_X, center_ball_Y) # Start ball back in center 
+            show_text = True
+        elif ball.score() >= screen_width: # If ball gets past player 2
+            p1_score += 1 # Add point to player 1 score
+            ball.reset(center_ball_X, center_ball_Y) # Start ball back in center 
+            show_text = True
+
+        if p1_score == 5: # Check to see if player 1 wins
+            display_text("Player 1 Wins, Press Enter to Play Again") # Display Text
+            # Restart the game if the user presses Enter
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_RETURN]:
+                p1_score, p2_score = 0, 0
+        if p2_score == 5: # Check to see if player 2 wins
+            display_text("Player 2 Wins, Press Enter to Play Again") # Display Tect
+            # Restart the game if the user presses Enter
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_RETURN]:
+                p1_score, p2_score = 0, 0
 
         pygame.display.flip() # Update the display
 
